@@ -20,6 +20,14 @@ You can start editing the page by modifying `app/page.tsx`. The page auto-update
 
 This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
 
+### Convex Backend
+
+1. Run `npx convex dev` to log in, create a project, and sync. This adds `NEXT_PUBLIC_CONVEX_URL` to `.env.local`.
+2. Seed the database: `npx convex run recommendations:seed`
+3. For Clerk auth in Convex (to show "Added by" for signed-in users):
+   - In Clerk Dashboard → JWT Templates → create **Convex** template
+   - Add `CLERK_JWT_ISSUER_DOMAIN` in Convex Dashboard (Settings → Environment Variables) with the Issuer URL from the template
+
 ### Clerk Authentication
 
 The app uses [Clerk](https://clerk.com) for auth. In **keyless mode** (no env vars), you can develop immediately—Clerk generates temporary keys locally. For production:

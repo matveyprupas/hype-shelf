@@ -1,6 +1,5 @@
 import { SignedIn, SignedOut, SignInButton, UserButton } from "@clerk/nextjs";
-import { RecommendationCard } from "@/components/RecommendationCard";
-import { MOCK_RECOMMENDATIONS } from "@/lib/mock-data";
+import { RecommendationList } from "@/components/RecommendationList";
 
 export default function Home() {
   return (
@@ -56,18 +55,12 @@ export default function Home() {
           </SignedIn>
         </div>
 
-        {/* Latest recommendations – read-only list */}
+        {/* Latest recommendations – Convex real-time list */}
         <section>
           <h2 className="mb-4 text-sm font-medium uppercase tracking-wider text-zinc-500 dark:text-zinc-400">
             Latest recommendations
           </h2>
-          <ul className="flex flex-col gap-4">
-            {MOCK_RECOMMENDATIONS.map((rec) => (
-              <li key={rec.id}>
-                <RecommendationCard rec={rec} />
-              </li>
-            ))}
-          </ul>
+          <RecommendationList />
         </section>
       </div>
     </div>
