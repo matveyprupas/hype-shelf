@@ -7,8 +7,6 @@ export const list = query({
   args: {},
   handler: async (ctx) => {
     const identity = await ctx.auth.getUserIdentity();
-    console.log("identity", identity);
-
     const recs = await ctx.db.query("recommendations").order("desc").take(50);
 
     return recs.map((rec) => {
