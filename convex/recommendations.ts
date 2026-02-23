@@ -1,6 +1,5 @@
 import { Genre } from "@/lib/types";
 import { mutation, query } from "./_generated/server";
-import { v } from "convex/values";
 
 /** Public list – returns addedBy only for authenticated users (hides from unauth) */
 export const list = query({
