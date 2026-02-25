@@ -5,16 +5,16 @@ import {
 } from "@/lib/recommendation-validation";
 import { Genre } from "@/lib/types";
 import type { Id } from "./_generated/dataModel";
+import { type ClerkIdentity, getAuthenticatedIdentity } from "./lib/auth";
 import { mutation, query } from "./_generated/server";
 import { v } from "convex/values";
-import { UserIdentity } from "convex/server";
 
 /**
  * Admin check – requires Clerk JWT to include role claim.
  * In Clerk Dashboard → JWT Templates → Convex: add claim "role": "{{user.public_metadata.role}}"
  * Then set user's public_metadata.role = "admin" for admin users.
  */
-function isAdmin(identity: Identity): boolean {
+function isAdmin(identity: ClerkIdentity): boolean {
   return identity.metadata?.role === "admin";
 }
 
@@ -30,14 +30,6 @@ const GENRE_VALUES = [
   "other",
 ] as const;
 
-type Identity = UserIdentity & {
-  userId: string;
-  fullName: string;
-  metadata: {
-    role: string;
-  };
-};
-
 const genreValidator = v.union(...GENRE_VALUES.map((g) => v.literal(g)));
 
 /** Create a recommendation – auth required, validated inputs */
@@ -48,12 +40,12 @@ export const create = mutation({
     link: v.string(),
     blurb: v.string(),
   },
-  handler: async (ctx, args) => {
-    const identity = (await ctx.auth.getUserIdentity()) as Identity | null;
 
-    if (!identity) {
-      throw new Error("You must be signed in to add a recommendation.");
-    }
+  handler: async (ctx, args) => {
+    const identity = getAuthenticatedIdentity(
+      await ctx.auth.getUserIdentity(),
+      "You must be signed in to add a recommendation."
+    );
 
     const title = args.title.trim();
     if (!title) {
@@ -79,7 +71,8 @@ export const create = mutation({
       throw new Error("Link must be a valid URL (e.g. https://…).");
     }
 
-    const addedBy = identity.fullName ?? identity.userId ?? "unknown user";
+    const addedBy =
+      identity.fullName ?? identity.name ?? identity.subject ?? "unknown user";
     await ctx.db.insert("recommendations", {
       title,
       genre: args.genre,
@@ -95,10 +88,10 @@ export const create = mutation({
 export const remove = mutation({
   args: { id: v.id("recommendations") },
   handler: async (ctx, args) => {
-    const identity = (await ctx.auth.getUserIdentity()) as Identity | null;
-    if (!identity) {
-      throw new Error("You must be signed in to delete a recommendation.");
-    }
+    const identity = getAuthenticatedIdentity(
+      await ctx.auth.getUserIdentity(),
+      "You must be signed in to delete a recommendation."
+    );
 
     const rec = await ctx.db.get(args.id);
     if (!rec) {
@@ -120,10 +113,10 @@ export const remove = mutation({
 export const toggleStaffPick = mutation({
   args: { id: v.id("recommendations") },
   handler: async (ctx, args) => {
-    const identity = (await ctx.auth.getUserIdentity()) as Identity | null;
-    if (!identity) {
-      throw new Error("You must be signed in.");
-    }
+    const identity = getAuthenticatedIdentity(
+      await ctx.auth.getUserIdentity(),
+      "You must be signed in."
+    );
     if (!isAdmin(identity)) {
       throw new Error("Only admins can mark Staff Picks.");
     }

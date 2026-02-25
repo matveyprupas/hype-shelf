@@ -8,6 +8,7 @@
  * @module
  */
 
+import type * as lib_auth from "../lib/auth.js";
 import type * as recommendations from "../recommendations.js";
 
 import type {
@@ -17,6 +18,7 @@ import type {
 } from "convex/server";
 
 declare const fullApi: ApiFromModules<{
+  "lib/auth": typeof lib_auth;
   recommendations: typeof recommendations;
 }>;
 
