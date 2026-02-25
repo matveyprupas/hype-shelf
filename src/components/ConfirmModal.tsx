@@ -1,5 +1,6 @@
 "use client";
 
+import { useCallback } from "react";
 import * as AlertDialog from "@radix-ui/react-alert-dialog";
 
 interface ConfirmModalProps {
@@ -22,12 +23,12 @@ export function ConfirmModal({
   confirmLabel,
   cancelLabel = "Cancel",
   onConfirm,
-  destructive = true,
+  destructive = false,
 }: ConfirmModalProps) {
-  const handleConfirm = () => {
+  const handleConfirm = useCallback(() => {
     onOpenChange(false);
     onConfirm();
-  };
+  }, [onOpenChange, onConfirm]);
 
   return (
     <AlertDialog.Root open={open} onOpenChange={onOpenChange}>

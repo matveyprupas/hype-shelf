@@ -4,6 +4,7 @@ import {
   URL_PATTERN,
 } from "@/lib/recommendation-validation";
 import { Genre } from "@/lib/types";
+import type { Id } from "./_generated/dataModel";
 import { mutation, query } from "./_generated/server";
 import { v } from "convex/values";
 import { UserIdentity } from "convex/server";
@@ -147,7 +148,7 @@ export const list = query({
 
     return recs.map((rec) => {
       const item: {
-        id: string;
+        id: Id<"recommendations">;
         title: string;
         genre: Genre;
         link: string;
@@ -157,7 +158,7 @@ export const list = query({
         isStaffPick?: boolean;
         createdAt: number;
       } = {
-        id: rec._id as string,
+        id: rec._id,
         title: rec.title,
         genre: rec.genre as Genre,
         link: rec.link,

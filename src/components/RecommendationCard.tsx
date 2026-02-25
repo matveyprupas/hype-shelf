@@ -1,10 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { memo, useCallback, useState } from "react";
 import { useMutation } from "convex/react";
 import { api } from "../../convex/_generated/api";
-import type { Id } from "../../convex/_generated/dataModel";
 import { Star, Trash2 } from "lucide-react";
+import { toast } from "sonner";
 import type { Recommendation } from "@/lib/types";
 import { ConfirmModal } from "./ConfirmModal";
 
@@ -23,7 +23,7 @@ function formatGenre(genre: string): string {
     .join(" ");
 }
 
-export function RecommendationCard({
+function RecommendationCardComponent({
   rec,
   currentUserId,
   isAdmin,
@@ -37,31 +37,38 @@ export function RecommendationCard({
   );
   const canToggleStaffPick = Boolean(isAdmin);
 
-  const handleDeleteClick = (e: React.MouseEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    if (!canDelete) return;
-    setShowDeleteConfirm(true);
-  };
+  const handleDeleteClick = useCallback(
+    (e: React.MouseEvent) => {
+      e.preventDefault();
+      e.stopPropagation();
+      if (!canDelete) return;
+      setShowDeleteConfirm(true);
+    },
+    [canDelete]
+  );
 
-  const handleDeleteConfirm = async () => {
+  const handleDeleteConfirm = useCallback(async () => {
     try {
-      await remove({ id: rec.id as Id<"recommendations"> });
+      await remove({ id: rec.id });
+      setShowDeleteConfirm(false);
     } catch (err) {
-      alert(err instanceof Error ? err.message : "Failed to delete");
+      toast.error(err instanceof Error ? err.message : "Failed to delete");
     }
-  };
+  }, [rec.id, remove]);
 
-  const handleToggleStaffPick = async (e: React.MouseEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    if (!canToggleStaffPick) return;
-    try {
-      await toggleStaffPick({ id: rec.id as Id<"recommendations"> });
-    } catch (err) {
-      alert(err instanceof Error ? err.message : "Failed to update");
-    }
-  };
+  const handleToggleStaffPick = useCallback(
+    async (e: React.MouseEvent) => {
+      e.preventDefault();
+      e.stopPropagation();
+      if (!canToggleStaffPick) return;
+      try {
+        await toggleStaffPick({ id: rec.id });
+      } catch (err) {
+        toast.error(err instanceof Error ? err.message : "Failed to update");
+      }
+    },
+    [canToggleStaffPick, rec.id, toggleStaffPick]
+  );
 
   return (
     <article className="group rounded-xl border border-zinc-200 bg-white p-4 shadow-sm transition hover:border-zinc-300 hover:shadow-md dark:border-zinc-700 dark:bg-zinc-900 dark:hover:border-zinc-600">
@@ -141,3 +148,5 @@ export function RecommendationCard({
     </article>
   );
 }
+
+export const RecommendationCard = memo(RecommendationCardComponent);

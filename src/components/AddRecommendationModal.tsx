@@ -31,13 +31,16 @@ export function AddRecommendationModal({
     onClose();
   }, [onClose]);
 
-  const handleDiscardCancel = useCallback(() => {
-    setShowDiscardConfirm(false);
-  }, []);
+  const handleOpenChange = useCallback(
+    (open: boolean) => {
+      if (!open) handleRequestClose();
+    },
+    [handleRequestClose]
+  );
 
   return (
     <>
-      <Dialog.Root open={isOpen} onOpenChange={(open) => !open && handleRequestClose()}>
+      <Dialog.Root open={isOpen} onOpenChange={handleOpenChange}>
         <Dialog.Portal>
           <Dialog.Overlay className="fixed inset-0 z-50 bg-black/40" />
           <Dialog.Content className="fixed left-1/2 top-1/2 z-50 w-full max-w-md -translate-x-1/2 -translate-y-1/2 rounded-xl border border-zinc-200 bg-white p-6 shadow-xl dark:border-zinc-700 dark:bg-zinc-900">

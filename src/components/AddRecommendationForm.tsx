@@ -1,13 +1,16 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useEffect, useMemo } from "react";
+import { useForm, useWatch } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation } from "convex/react";
 import { api } from "../../convex/_generated/api";
+import { BLURB_MAX, TITLE_MAX } from "@/lib/recommendation-validation";
 import {
-  BLURB_MAX,
-  TITLE_MAX,
-  URL_PATTERN,
-} from "@/lib/recommendation-validation";
+  hasFormData,
+  recommendationFormSchema,
+  type RecommendationFormValues,
+} from "@/lib/recommendation-schema";
 import { Genre, genreLabels } from "@/lib/types";
 
 const GENRES: Genre[] = [
@@ -22,56 +25,12 @@ const GENRES: Genre[] = [
   Genre.OTHER,
 ];
 
-export interface FormState {
-  title: string;
-  genre: Genre;
-  link: string;
-  blurb: string;
-}
-
-export interface FormErrors {
-  title?: string;
-  genre?: string;
-  link?: string;
-  blurb?: string;
-}
-
-export const initialFormState: FormState = {
+const defaultValues: RecommendationFormValues = {
   title: "",
   genre: Genre.OTHER,
   link: "",
   blurb: "",
 };
-
-function validateForm(form: FormState): FormErrors {
-  const err: FormErrors = {};
-
-  const title = form.title.trim();
-  if (!title) err.title = "Title is required.";
-  else if (title.length > TITLE_MAX)
-    err.title = `Title must be at most ${TITLE_MAX} characters.`;
-
-  const link = form.link.trim();
-  if (!link) err.link = "Link is required.";
-  else if (!URL_PATTERN.test(link))
-    err.link = "Link must be a valid URL (e.g. https://…).";
-
-  const blurb = form.blurb.trim();
-  if (!blurb) err.blurb = "Blurb is required.";
-  else if (blurb.length > BLURB_MAX)
-    err.blurb = `Blurb must be at most ${BLURB_MAX} characters.`;
-
-  return err;
-}
-
-export function hasFormData(form: FormState): boolean {
-  return !!(
-    form.title.trim() ||
-    form.link.trim() ||
-    form.blurb.trim() ||
-    form.genre !== Genre.OTHER
-  );
-}
 
 interface AddRecommendationFormProps {
   onCancel: () => void;
@@ -84,111 +43,101 @@ export function AddRecommendationForm({
   onDirtyChange,
   onSuccess,
 }: AddRecommendationFormProps) {
-  const [form, setForm] = useState<FormState>(initialFormState);
-  const [errors, setErrors] = useState<FormErrors>({});
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [submitError, setSubmitError] = useState<string | null>(null);
-  const createRec = useMutation(api.recommendations.create);
+  const {
+    register,
+    handleSubmit,
+    control,
+    formState: { errors, isSubmitting },
+    reset,
+    setError,
+    clearErrors,
+  } = useForm<RecommendationFormValues>({
+    resolver: zodResolver(recommendationFormSchema),
+    defaultValues,
+    mode: "onBlur",
+  });
 
-  const dirty = hasFormData(form);
+  const createRec = useMutation(api.recommendations.create);
+  const watchedValues = useWatch({ control }) as RecommendationFormValues;
+
+  const dirty = useMemo(
+    () => hasFormData(watchedValues ?? defaultValues),
+    [watchedValues]
+  );
 
   useEffect(() => {
     onDirtyChange(dirty);
   }, [dirty, onDirtyChange]);
 
-  const handleChange = useCallback(
-    (field: keyof FormState) =>
-      (
-        e: React.ChangeEvent<
-          HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement
-        >
-      ) => {
-        setForm((prev) => ({ ...prev, [field]: e.target.value }));
-        if (errors[field]) {
-          setErrors((prev) => ({ ...prev, [field]: undefined }));
-        }
-      },
-    [errors]
-  );
+  const onSubmit = async (data: RecommendationFormValues) => {
+    clearErrors("root");
+    try {
+      await createRec({
+        title: data.title.trim(),
+        genre: data.genre,
+        link: data.link.trim(),
+        blurb: data.blurb.trim(),
+      });
+      reset(defaultValues);
+      onSuccess();
+    } catch (err) {
+      setError("root", {
+        type: "manual",
+        message:
+          err instanceof Error
+            ? err.message
+            : "Something went wrong. Try again.",
+      });
+    }
+  };
 
-  const handleSubmit = useCallback(
-    async (e: React.FormEvent) => {
-      e.preventDefault();
-      setSubmitError(null);
-      const errs = validateForm(form);
-      setErrors(errs);
-      if (Object.keys(errs).length > 0) return;
-
-      setIsSubmitting(true);
-      try {
-        await createRec({
-          title: form.title.trim(),
-          genre: form.genre,
-          link: form.link.trim(),
-          blurb: form.blurb.trim(),
-        });
-        onSuccess();
-      } catch (err) {
-        setSubmitError(
-          err instanceof Error ? err.message : "Something went wrong. Try again."
-        );
-      } finally {
-        setIsSubmitting(false);
-      }
-    },
-    [form, createRec, onSuccess]
-  );
+  const inputClassName =
+    "w-full rounded-lg border border-zinc-300 px-3 py-2 text-zinc-900 placeholder-zinc-400 focus:border-zinc-500 focus:outline-none focus:ring-1 focus:ring-zinc-500 dark:border-zinc-600 dark:bg-zinc-800 dark:text-zinc-100 dark:placeholder-zinc-500";
+  const labelClassName =
+    "mb-1 block text-sm font-medium text-zinc-700 dark:text-zinc-300";
+  const errorClassName = "mt-1 text-sm text-red-600 dark:text-red-400";
 
   return (
-    <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-      {submitError && (
+    <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-4">
+      {errors.root && (
         <div
           role="alert"
+          aria-live="polite"
           className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700 dark:bg-red-900/20 dark:text-red-400"
         >
-          {submitError}
+          {errors.root.message}
         </div>
       )}
 
       <div>
-        <label
-          htmlFor="rec-title"
-          className="mb-1 block text-sm font-medium text-zinc-700 dark:text-zinc-300"
-        >
+        <label htmlFor="rec-title" className={labelClassName}>
           Title
         </label>
         <input
           id="rec-title"
           type="text"
-          value={form.title}
-          onChange={handleChange("title")}
+          {...register("title")}
           placeholder="e.g. Everything Everywhere All at Once"
-          className="w-full rounded-lg border border-zinc-300 px-3 py-2 text-zinc-900 placeholder-zinc-400 focus:border-zinc-500 focus:outline-none focus:ring-1 focus:ring-zinc-500 dark:border-zinc-600 dark:bg-zinc-800 dark:text-zinc-100 dark:placeholder-zinc-500"
+          className={inputClassName}
           autoFocus
-          maxLength={TITLE_MAX + 20}
+          maxLength={TITLE_MAX}
         />
         {errors.title && (
-          <p className="mt-1 text-sm text-red-600 dark:text-red-400">
-            {errors.title}
-          </p>
+          <p className={errorClassName}>{errors.title.message}</p>
         )}
         <p className="mt-0.5 text-xs text-zinc-500 dark:text-zinc-400">
-          {form.title.length}/{TITLE_MAX}
+          {(watchedValues?.title ?? "").length}/{TITLE_MAX}
         </p>
       </div>
 
       <div>
-        <label
-          htmlFor="rec-genre"
-          className="mb-1 block text-sm font-medium text-zinc-700 dark:text-zinc-300"
-        >
+        <label htmlFor="rec-genre" className={labelClassName}>
           Genre
         </label>
         <select
           id="rec-genre"
-          value={form.genre}
-          onChange={handleChange("genre")}
-          className="w-full rounded-lg border border-zinc-300 px-3 py-2 text-zinc-900 focus:border-zinc-500 focus:outline-none focus:ring-1 focus:ring-zinc-500 dark:border-zinc-600 dark:bg-zinc-800 dark:text-zinc-100"
+          {...register("genre")}
+          className={inputClassName}
         >
           {GENRES.map((g) => (
             <option key={g} value={g}>
@@ -199,50 +148,36 @@ export function AddRecommendationForm({
       </div>
 
       <div>
-        <label
-          htmlFor="rec-link"
-          className="mb-1 block text-sm font-medium text-zinc-700 dark:text-zinc-300"
-        >
+        <label htmlFor="rec-link" className={labelClassName}>
           Link
         </label>
         <input
           id="rec-link"
           type="url"
-          value={form.link}
-          onChange={handleChange("link")}
+          {...register("link")}
           placeholder="https://..."
-          className="w-full rounded-lg border border-zinc-300 px-3 py-2 text-zinc-900 placeholder-zinc-400 focus:border-zinc-500 focus:outline-none focus:ring-1 focus:ring-zinc-500 dark:border-zinc-600 dark:bg-zinc-800 dark:text-zinc-100 dark:placeholder-zinc-500"
+          className={inputClassName}
         />
-        {errors.link && (
-          <p className="mt-1 text-sm text-red-600 dark:text-red-400">
-            {errors.link}
-          </p>
-        )}
+        {errors.link && <p className={errorClassName}>{errors.link.message}</p>}
       </div>
 
       <div>
-        <label
-          htmlFor="rec-blurb"
-          className="mb-1 block text-sm font-medium text-zinc-700 dark:text-zinc-300"
-        >
+        <label htmlFor="rec-blurb" className={labelClassName}>
           Short blurb
         </label>
         <textarea
           id="rec-blurb"
-          value={form.blurb}
-          onChange={handleChange("blurb")}
+          {...register("blurb")}
           placeholder="A brief description of why you recommend it..."
           rows={3}
-          className="w-full resize-none rounded-lg border border-zinc-300 px-3 py-2 text-zinc-900 placeholder-zinc-400 focus:border-zinc-500 focus:outline-none focus:ring-1 focus:ring-zinc-500 dark:border-zinc-600 dark:bg-zinc-800 dark:text-zinc-100 dark:placeholder-zinc-500"
-          maxLength={BLURB_MAX + 50}
+          className={`${inputClassName} resize-none`}
+          maxLength={BLURB_MAX}
         />
         {errors.blurb && (
-          <p className="mt-1 text-sm text-red-600 dark:text-red-400">
-            {errors.blurb}
-          </p>
+          <p className={errorClassName}>{errors.blurb.message}</p>
         )}
         <p className="mt-0.5 text-xs text-zinc-500 dark:text-zinc-400">
-          {form.blurb.length}/{BLURB_MAX}
+          {(watchedValues?.blurb ?? "").length}/{BLURB_MAX}
         </p>
       </div>
 

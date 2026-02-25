@@ -1,5 +1,6 @@
 "use client";
 
+import { useMemo } from "react";
 import { useUser } from "@clerk/nextjs";
 import { useQuery } from "convex/react";
 import { api } from "../../convex/_generated/api";
@@ -12,6 +13,22 @@ export function RecommendationList() {
   const currentUserId = user?.id ?? null;
   const isAdmin =
     (user?.publicMetadata?.role as string | undefined) === "admin";
+
+  const items = useMemo(
+    () =>
+      recs?.map((rec) => ({
+        id: rec.id,
+        title: rec.title,
+        genre: rec.genre,
+        link: rec.link,
+        blurb: rec.blurb,
+        addedBy: rec.addedBy,
+        userId: rec.userId,
+        isStaffPick: rec.isStaffPick,
+        createdAt: new Date(rec.createdAt).toISOString(),
+      })) ?? [],
+    [recs]
+  );
 
   if (recs === undefined) {
     return (
@@ -31,20 +48,10 @@ export function RecommendationList() {
 
   return (
     <ul className="flex flex-col gap-4">
-      {recs.map((rec) => (
+      {items.map((rec) => (
         <li key={rec.id}>
           <RecommendationCard
-            rec={{
-              id: rec.id,
-              title: rec.title,
-              genre: rec.genre,
-              link: rec.link,
-              blurb: rec.blurb,
-              addedBy: rec.addedBy,
-              userId: rec.userId,
-              isStaffPick: rec.isStaffPick,
-              createdAt: new Date(rec.createdAt).toISOString(),
-            }}
+            rec={rec}
             currentUserId={currentUserId}
             isAdmin={isAdmin}
           />

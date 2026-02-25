@@ -1,5 +1,7 @@
+import type { Id } from "../../convex/_generated/dataModel";
+
 /**
- * Recommendation type – aligns with future Convex schema.
+ * Recommendation type – aligns with Convex schema.
  * Fields: title, genre, link, short blurb.
  */
 export enum Genre {
@@ -27,7 +29,7 @@ export const genreLabels: Record<Genre, string> = {
 };
 
 export interface Recommendation {
-  id: string;
+  id: Id<"recommendations">;
   title: string;
   genre: Genre;
   link: string;
