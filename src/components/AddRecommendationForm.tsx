@@ -58,12 +58,9 @@ export function AddRecommendationForm({
   });
 
   const createRec = useMutation(api.recommendations.create);
-  const watchedValues = useWatch({ control }) as RecommendationFormValues;
+  const watchedValues = useWatch<RecommendationFormValues>({ control });
 
-  const dirty = useMemo(
-    () => hasFormData(watchedValues ?? defaultValues),
-    [watchedValues]
-  );
+  const dirty = useMemo(() => hasFormData(watchedValues), [watchedValues]);
 
   useEffect(() => {
     onDirtyChange(dirty);

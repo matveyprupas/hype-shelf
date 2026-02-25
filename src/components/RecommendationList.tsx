@@ -4,6 +4,7 @@ import { useMemo } from "react";
 import { useUser } from "@clerk/nextjs";
 import { useQuery } from "convex/react";
 import { api } from "../../convex/_generated/api";
+import { getPublicMetadataRole } from "@/lib/clerk-utils";
 import { RecommendationCard } from "./RecommendationCard";
 
 export function RecommendationList() {
@@ -11,8 +12,7 @@ export function RecommendationList() {
   const recs = useQuery(api.recommendations.list);
 
   const currentUserId = user?.id ?? null;
-  const isAdmin =
-    (user?.publicMetadata?.role as string | undefined) === "admin";
+  const isAdmin = getPublicMetadataRole(user?.publicMetadata) === "admin";
 
   const items = useMemo(
     () =>
