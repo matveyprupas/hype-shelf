@@ -1,11 +1,17 @@
 "use client";
 
+import { useUser } from "@clerk/nextjs";
 import { useQuery } from "convex/react";
 import { api } from "../../convex/_generated/api";
 import { RecommendationCard } from "./RecommendationCard";
 
 export function RecommendationList() {
+  const { user } = useUser();
   const recs = useQuery(api.recommendations.list);
+
+  const currentUserId = user?.id ?? null;
+  const isAdmin =
+    (user?.publicMetadata?.role as string | undefined) === "admin";
 
   if (recs === undefined) {
     return (
@@ -35,9 +41,12 @@ export function RecommendationList() {
               link: rec.link,
               blurb: rec.blurb,
               addedBy: rec.addedBy,
+              userId: rec.userId,
               isStaffPick: rec.isStaffPick,
               createdAt: new Date(rec.createdAt).toISOString(),
             }}
+            currentUserId={currentUserId}
+            isAdmin={isAdmin}
           />
         </li>
       ))}

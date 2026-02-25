@@ -32,8 +32,9 @@ export interface Recommendation {
   genre: Genre;
   link: string;
   blurb: string;
-  /** Populated once auth is implemented */
   addedBy?: string;
+  /** Owner's Clerk user ID – only present when viewer is authenticated */
+  userId?: string;
   /** For admin "Staff Pick" feature */
   isStaffPick?: boolean;
   /** ISO date string */

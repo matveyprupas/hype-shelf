@@ -8,6 +8,15 @@ import { mutation, query } from "./_generated/server";
 import { v } from "convex/values";
 import { UserIdentity } from "convex/server";
 
+/**
+ * Admin check – requires Clerk JWT to include role claim.
+ * In Clerk Dashboard → JWT Templates → Convex: add claim "role": "{{user.public_metadata.role}}"
+ * Then set user's public_metadata.role = "admin" for admin users.
+ */
+function isAdmin(identity: Identity): boolean {
+  return identity.metadata?.role === "admin";
+}
+
 const GENRE_VALUES = [
   "horror",
   "action",
@@ -20,6 +29,14 @@ const GENRE_VALUES = [
   "other",
 ] as const;
 
+type Identity = UserIdentity & {
+  userId: string;
+  fullName: string;
+  metadata: {
+    role: string;
+  };
+};
+
 const genreValidator = v.union(...GENRE_VALUES.map((g) => v.literal(g)));
 
 /** Create a recommendation – auth required, validated inputs */
@@ -31,14 +48,7 @@ export const create = mutation({
     blurb: v.string(),
   },
   handler: async (ctx, args) => {
-    const identity = (await ctx.auth.getUserIdentity()) as
-      | (UserIdentity & {
-          userId: string;
-          fullName: string;
-        })
-      | null;
-
-    console.log("identity", identity);
+    const identity = (await ctx.auth.getUserIdentity()) as Identity | null;
 
     if (!identity) {
       throw new Error("You must be signed in to add a recommendation.");
@@ -80,7 +90,55 @@ export const create = mutation({
   },
 });
 
-/** Public list – returns addedBy only for authenticated users (hides from unauth) */
+/** Delete a recommendation – admin can delete any, user can delete only own */
+export const remove = mutation({
+  args: { id: v.id("recommendations") },
+  handler: async (ctx, args) => {
+    const identity = (await ctx.auth.getUserIdentity()) as Identity | null;
+    if (!identity) {
+      throw new Error("You must be signed in to delete a recommendation.");
+    }
+
+    const rec = await ctx.db.get(args.id);
+    if (!rec) {
+      throw new Error("Recommendation not found.");
+    }
+
+    const admin = isAdmin(identity);
+    const isOwner = rec.userId === identity.subject;
+
+    if (!admin && !isOwner) {
+      throw new Error("You can only delete your own recommendations.");
+    }
+
+    await ctx.db.delete(args.id);
+  },
+});
+
+/** Toggle Staff Pick – admin only */
+export const toggleStaffPick = mutation({
+  args: { id: v.id("recommendations") },
+  handler: async (ctx, args) => {
+    const identity = (await ctx.auth.getUserIdentity()) as Identity | null;
+    if (!identity) {
+      throw new Error("You must be signed in.");
+    }
+    if (!isAdmin(identity)) {
+      throw new Error("Only admins can mark Staff Picks.");
+    }
+
+    const rec = await ctx.db.get(args.id);
+    if (!rec) {
+      throw new Error("Recommendation not found.");
+    }
+
+    await ctx.db.patch(args.id, {
+      isStaffPick: !rec.isStaffPick,
+    });
+  },
+});
+
+/** Public list – returns addedBy and userId only for authenticated users (hides from unauth) */
 export const list = query({
   args: {},
   handler: async (ctx) => {
@@ -95,6 +153,7 @@ export const list = query({
         link: string;
         blurb: string;
         addedBy?: string;
+        userId?: string;
         isStaffPick?: boolean;
         createdAt: number;
       } = {
@@ -108,6 +167,7 @@ export const list = query({
       };
       if (identity) {
         item.addedBy = rec.addedBy;
+        item.userId = rec.userId;
       }
       return item;
     });
