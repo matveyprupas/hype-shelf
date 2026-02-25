@@ -1,5 +1,84 @@
+import {
+  BLURB_MAX,
+  TITLE_MAX,
+  URL_PATTERN,
+} from "@/lib/recommendation-validation";
 import { Genre } from "@/lib/types";
 import { mutation, query } from "./_generated/server";
+import { v } from "convex/values";
+import { UserIdentity } from "convex/server";
+
+const GENRE_VALUES = [
+  "horror",
+  "action",
+  "comedy",
+  "drama",
+  "sci-fi",
+  "documentary",
+  "animation",
+  "thriller",
+  "other",
+] as const;
+
+const genreValidator = v.union(...GENRE_VALUES.map((g) => v.literal(g)));
+
+/** Create a recommendation – auth required, validated inputs */
+export const create = mutation({
+  args: {
+    title: v.string(),
+    genre: genreValidator,
+    link: v.string(),
+    blurb: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const identity = (await ctx.auth.getUserIdentity()) as
+      | (UserIdentity & {
+          userId: string;
+          fullName: string;
+        })
+      | null;
+
+    console.log("identity", identity);
+
+    if (!identity) {
+      throw new Error("You must be signed in to add a recommendation.");
+    }
+
+    const title = args.title.trim();
+    if (!title) {
+      throw new Error("Title is required.");
+    }
+    if (title.length > TITLE_MAX) {
+      throw new Error(`Title must be at most ${TITLE_MAX} characters.`);
+    }
+
+    const blurb = args.blurb.trim();
+    if (!blurb) {
+      throw new Error("Blurb is required.");
+    }
+    if (blurb.length > BLURB_MAX) {
+      throw new Error(`Blurb must be at most ${BLURB_MAX} characters.`);
+    }
+
+    const link = args.link.trim();
+    if (!link) {
+      throw new Error("Link is required.");
+    }
+    if (!URL_PATTERN.test(link)) {
+      throw new Error("Link must be a valid URL (e.g. https://…).");
+    }
+
+    const addedBy = identity.fullName ?? identity.userId ?? "unknown user";
+    await ctx.db.insert("recommendations", {
+      title,
+      genre: args.genre,
+      link,
+      blurb,
+      userId: identity.subject,
+      addedBy,
+    });
+  },
+});
 
 /** Public list – returns addedBy only for authenticated users (hides from unauth) */
 export const list = query({

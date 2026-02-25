@@ -14,6 +14,18 @@ export enum Genre {
   OTHER = "other",
 }
 
+export const genreLabels: Record<Genre, string> = {
+  [Genre.HORROR]: "Horror",
+  [Genre.ACTION]: "Action",
+  [Genre.COMEDY]: "Comedy",
+  [Genre.DRAMA]: "Drama",
+  [Genre.SCI_FI]: "Sci-Fi",
+  [Genre.DOCUMENTARY]: "Documentary",
+  [Genre.ANIMATION]: "Animation",
+  [Genre.THRILLER]: "Thriller",
+  [Genre.OTHER]: "Other",
+};
+
 export interface Recommendation {
   id: string;
   title: string;
