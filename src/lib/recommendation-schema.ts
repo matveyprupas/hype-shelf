@@ -4,7 +4,7 @@ import {
   TITLE_MAX,
   URL_PATTERN,
 } from "@/lib/recommendation-validation";
-import { Genre } from "@/lib/types";
+import { Genre, GENRE_VALUES } from "@/lib/genres";
 
 export const recommendationFormSchema = z.object({
   title: z
@@ -14,7 +14,7 @@ export const recommendationFormSchema = z.object({
       (s) => s.trim().length <= TITLE_MAX,
       `Title must be at most ${TITLE_MAX} characters.`
     ),
-  genre: z.nativeEnum(Genre),
+  genre: z.enum(GENRE_VALUES as [Genre, ...Genre[]]),
   link: z
     .string()
     .refine((s) => s.trim().length > 0, "Link is required.")
@@ -33,11 +33,14 @@ export const recommendationFormSchema = z.object({
 
 export type RecommendationFormValues = z.infer<typeof recommendationFormSchema>;
 
-export function hasFormData(values: RecommendationFormValues): boolean {
+export function hasFormData(
+  values: Partial<RecommendationFormValues> | undefined
+): boolean {
+  if (!values) return false;
   return !!(
-    values.title.trim() ||
-    values.link.trim() ||
-    values.blurb.trim() ||
-    values.genre !== Genre.OTHER
+    (values.title ?? "").trim() ||
+    (values.link ?? "").trim() ||
+    (values.blurb ?? "").trim() ||
+    (values.genre ?? Genre.OTHER) !== Genre.OTHER
   );
 }

@@ -6,24 +6,12 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation } from "convex/react";
 import { api } from "../../convex/_generated/api";
 import { BLURB_MAX, TITLE_MAX } from "@/lib/recommendation-validation";
+import { Genre, GENRE_VALUES, genreLabels } from "@/lib/genres";
 import {
   hasFormData,
   recommendationFormSchema,
   type RecommendationFormValues,
 } from "@/lib/recommendation-schema";
-import { Genre, genreLabels } from "@/lib/types";
-
-const GENRES: Genre[] = [
-  Genre.HORROR,
-  Genre.ACTION,
-  Genre.COMEDY,
-  Genre.DRAMA,
-  Genre.SCI_FI,
-  Genre.DOCUMENTARY,
-  Genre.ANIMATION,
-  Genre.THRILLER,
-  Genre.OTHER,
-];
 
 const defaultValues: RecommendationFormValues = {
   title: "",
@@ -136,7 +124,7 @@ export function AddRecommendationForm({
           {...register("genre")}
           className={inputClassName}
         >
-          {GENRES.map((g) => (
+          {GENRE_VALUES.map((g) => (
             <option key={g} value={g}>
               {genreLabels[g]}
             </option>

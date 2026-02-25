@@ -3,9 +3,10 @@ import {
   TITLE_MAX,
   URL_PATTERN,
 } from "@/lib/recommendation-validation";
-import { Genre } from "@/lib/types";
+import { Genre } from "@/lib/genres";
 import type { Id } from "./_generated/dataModel";
 import { type ClerkIdentity, getAuthenticatedIdentity } from "./lib/auth";
+import { genreValidator } from "./lib/genres";
 import { mutation, query } from "./_generated/server";
 import { v } from "convex/values";
 
@@ -17,20 +18,6 @@ import { v } from "convex/values";
 function isAdmin(identity: ClerkIdentity): boolean {
   return identity.metadata?.role === "admin";
 }
-
-const GENRE_VALUES = [
-  "horror",
-  "action",
-  "comedy",
-  "drama",
-  "sci-fi",
-  "documentary",
-  "animation",
-  "thriller",
-  "other",
-] as const;
-
-const genreValidator = v.union(...GENRE_VALUES.map((g) => v.literal(g)));
 
 /** Create a recommendation – auth required, validated inputs */
 export const create = mutation({
@@ -153,7 +140,7 @@ export const list = query({
       } = {
         id: rec._id,
         title: rec.title,
-        genre: rec.genre as Genre,
+        genre: rec.genre,
         link: rec.link,
         blurb: rec.blurb,
         isStaffPick: rec.isStaffPick,

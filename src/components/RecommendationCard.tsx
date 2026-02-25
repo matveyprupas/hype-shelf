@@ -5,6 +5,7 @@ import { useMutation } from "convex/react";
 import { api } from "../../convex/_generated/api";
 import { Star, Trash2 } from "lucide-react";
 import { toast } from "sonner";
+import { genreLabels } from "@/lib/genres";
 import type { Recommendation } from "@/lib/types";
 import { ConfirmModal } from "./ConfirmModal";
 
@@ -14,13 +15,6 @@ interface RecommendationCardProps {
   currentUserId?: string | null;
   /** True when user has admin role (from Clerk publicMetadata.role) */
   isAdmin?: boolean;
-}
-
-function formatGenre(genre: string): string {
-  return genre
-    .split("-")
-    .map((s) => s.charAt(0).toUpperCase() + s.slice(1))
-    .join(" ");
 }
 
 function RecommendationCardComponent({
@@ -76,7 +70,7 @@ function RecommendationCardComponent({
         <div className="flex flex-wrap items-center justify-between gap-2">
           <div className="flex flex-wrap items-center gap-2">
             <span className="inline-flex rounded-full bg-zinc-100 px-2.5 py-0.5 text-xs font-medium text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400">
-              {formatGenre(rec.genre)}
+              {genreLabels[rec.genre] ?? rec.genre}
             </span>
             {rec.isStaffPick && (
               <span className="inline-flex rounded-full bg-amber-100 px-2.5 py-0.5 text-xs font-medium text-amber-800 dark:bg-amber-900/30 dark:text-amber-400">

@@ -1,33 +1,10 @@
 import type { Id } from "../../convex/_generated/dataModel";
+import type { Genre } from "./genres";
 
 /**
  * Recommendation type – aligns with Convex schema.
  * Fields: title, genre, link, short blurb.
  */
-export enum Genre {
-  HORROR = "horror",
-  ACTION = "action",
-  COMEDY = "comedy",
-  DRAMA = "drama",
-  SCI_FI = "sci-fi",
-  DOCUMENTARY = "documentary",
-  ANIMATION = "animation",
-  THRILLER = "thriller",
-  OTHER = "other",
-}
-
-export const genreLabels: Record<Genre, string> = {
-  [Genre.HORROR]: "Horror",
-  [Genre.ACTION]: "Action",
-  [Genre.COMEDY]: "Comedy",
-  [Genre.DRAMA]: "Drama",
-  [Genre.SCI_FI]: "Sci-Fi",
-  [Genre.DOCUMENTARY]: "Documentary",
-  [Genre.ANIMATION]: "Animation",
-  [Genre.THRILLER]: "Thriller",
-  [Genre.OTHER]: "Other",
-};
-
 export interface Recommendation {
   id: Id<"recommendations">;
   title: string;
@@ -35,10 +12,13 @@ export interface Recommendation {
   link: string;
   blurb: string;
   addedBy?: string;
-  /** Owner's Clerk user ID – only present when viewer is authenticated */
+  /** Owner's Clerk user ID – present when viewer is authenticated */
   userId?: string;
   /** For admin "Staff Pick" feature */
   isStaffPick?: boolean;
   /** ISO date string */
   createdAt: string;
 }
+
+// Re-export Genre and genreLabels for consumers that import from types
+export { Genre, genreLabels } from "./genres";
