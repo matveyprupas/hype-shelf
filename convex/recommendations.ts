@@ -116,11 +116,12 @@ export const list = query({
   handler: async (ctx, args) => {
     const identity = await ctx.auth.getUserIdentity();
     const limit = identity ? 50 : 3;
+    const useGenreFilter = identity && args.genre;
 
-    const recs = args.genre
+    const recs = useGenreFilter
       ? await ctx.db
           .query("recommendations")
-          .withIndex("by_genre", (q) => q.eq("genre", args.genre!))
+          .withIndex("by_genre", (q) => q.eq("genre", args.genre as Genre))
           .order("desc")
           .take(limit)
       : await ctx.db.query("recommendations").order("desc").take(limit);

@@ -13,7 +13,7 @@ export function RecommendationList() {
   const { user } = useUser();
   const [genreFilter, setGenreFilter] = useState<Genre | "all">("all");
   const recs = useQuery(api.recommendations.list, {
-    genre: genreFilter === "all" ? undefined : genreFilter,
+    genre: user && genreFilter !== "all" ? genreFilter : undefined,
   });
 
   const currentUserId = user?.id ?? null;
@@ -35,10 +35,14 @@ export function RecommendationList() {
     [recs]
   );
 
+  const showGenreFilter = !!user;
+
   if (recs === undefined) {
     return (
       <div className="space-y-4">
-        <GenreFilter genreFilter={genreFilter} setGenreFilter={setGenreFilter} />
+        {showGenreFilter && (
+          <GenreFilter genreFilter={genreFilter} setGenreFilter={setGenreFilter} />
+        )}
         <div className="py-8 text-center text-sm text-zinc-500 dark:text-zinc-400">
           Loading recommendations…
         </div>
@@ -49,9 +53,11 @@ export function RecommendationList() {
   if (recs.length === 0) {
     return (
       <div className="space-y-6">
-        <GenreFilter genreFilter={genreFilter} setGenreFilter={setGenreFilter} />
+        {showGenreFilter && (
+          <GenreFilter genreFilter={genreFilter} setGenreFilter={setGenreFilter} />
+        )}
         <p className="py-8 text-center text-sm text-zinc-500 dark:text-zinc-400">
-          {genreFilter === "all"
+          {!showGenreFilter || genreFilter === "all"
             ? "No recommendations yet. Sign in to add yours!"
             : `No recommendations in ${genreLabels[genreFilter]} yet.`}
         </p>
@@ -61,7 +67,9 @@ export function RecommendationList() {
 
   return (
     <div className="space-y-4">
-      <GenreFilter genreFilter={genreFilter} setGenreFilter={setGenreFilter} />
+      {showGenreFilter && (
+        <GenreFilter genreFilter={genreFilter} setGenreFilter={setGenreFilter} />
+      )}
       <ul className="flex flex-col gap-4">
       {items.map((rec) => (
         <li key={rec.id}>
