@@ -1,3 +1,4 @@
+import { UNAUTH_RECOMMENDATIONS_LIMIT } from "@/lib/recommendation-constants";
 import {
   BLURB_MAX,
   TITLE_MAX,
@@ -8,6 +9,7 @@ import type { Id } from "./_generated/dataModel";
 import { requireAdmin, requireOwnerOrAdmin, requireSignedIn } from "./lib/auth";
 import { genreValidator } from "./lib/genres";
 import { internalMutation, mutation, query } from "./_generated/server";
+import { paginationOptsValidator } from "convex/server";
 import { v } from "convex/values";
 
 /** Create a recommendation – auth required, validated inputs */
@@ -112,12 +114,13 @@ export const list = query({
   handler: async (ctx, args) => {
     const identity = await ctx.auth.getUserIdentity();
     const limit = identity ? 50 : 3;
-    const useGenreFilter = identity && args.genre;
+    const genre = args.genre;
+    const useGenreFilter = identity !== null && genre !== undefined;
 
     const recs = useGenreFilter
       ? await ctx.db
           .query("recommendations")
-          .withIndex("by_genre", (q) => q.eq("genre", args.genre as Genre))
+          .withIndex("by_genre", (q) => q.eq("genre", genre))
           .order("desc")
           .take(limit)
       : await ctx.db.query("recommendations").order("desc").take(limit);
@@ -148,6 +151,103 @@ export const list = query({
       }
       return item;
     });
+  },
+});
+
+/** Paginated list for infinite scroll – PAGE_SIZE for auth users, 3 max for unauth */
+export const listPaginated = query({
+  args: {
+    paginationOpts: paginationOptsValidator,
+    genre: v.optional(genreValidator),
+  },
+  handler: async (ctx, args) => {
+    const identity = await ctx.auth.getUserIdentity();
+    const genre = args.genre;
+    const useGenreFilter = identity !== null && genre !== undefined;
+
+    const baseQuery = useGenreFilter
+      ? ctx.db
+          .query("recommendations")
+          .withIndex("by_genre", (q) => q.eq("genre", genre))
+          .order("desc")
+      : ctx.db.query("recommendations").order("desc");
+
+    const isUnauth = identity === null;
+    const opts = args.paginationOpts;
+
+    if (isUnauth) {
+      if (opts.cursor !== null) {
+        return {
+          page: [],
+          isDone: true,
+          continueCursor: "",
+        };
+      }
+      const paginationOpts = {
+        numItems: UNAUTH_RECOMMENDATIONS_LIMIT,
+        cursor: null as string | null,
+      };
+      const result = await baseQuery.paginate(paginationOpts);
+      return {
+        ...result,
+        page: result.page.map((rec) => {
+          const item: {
+            id: Id<"recommendations">;
+            title: string;
+            genre: Genre;
+            link: string;
+            blurb: string;
+            addedBy?: string;
+            userId?: string;
+            isStaffPick?: boolean;
+            createdAt: number;
+          } = {
+            id: rec._id,
+            title: rec.title,
+            genre: rec.genre,
+            link: rec.link,
+            blurb: rec.blurb,
+            isStaffPick: rec.isStaffPick,
+            createdAt: rec._creationTime,
+          };
+          return item;
+        }),
+        isDone: true,
+        continueCursor: "",
+      };
+    }
+
+    const result = await baseQuery.paginate(opts);
+
+    return {
+      ...result,
+      page: result.page.map((rec) => {
+        const item: {
+          id: Id<"recommendations">;
+          title: string;
+          genre: Genre;
+          link: string;
+          blurb: string;
+          addedBy?: string;
+          userId?: string;
+          isStaffPick?: boolean;
+          createdAt: number;
+        } = {
+          id: rec._id,
+          title: rec.title,
+          genre: rec.genre,
+          link: rec.link,
+          blurb: rec.blurb,
+          isStaffPick: rec.isStaffPick,
+          createdAt: rec._creationTime,
+        };
+        if (identity) {
+          item.addedBy = rec.addedBy;
+          item.userId = rec.userId;
+        }
+        return item;
+      }),
+    };
   },
 });
 
