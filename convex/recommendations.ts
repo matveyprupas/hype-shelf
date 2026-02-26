@@ -124,7 +124,11 @@ export const list = query({
   args: {},
   handler: async (ctx) => {
     const identity = await ctx.auth.getUserIdentity();
-    const recs = await ctx.db.query("recommendations").order("desc").take(50);
+    const limit = identity ? 50 : 3;
+    const recs = await ctx.db
+      .query("recommendations")
+      .order("desc")
+      .take(limit);
 
     return recs.map((rec) => {
       const item: {
