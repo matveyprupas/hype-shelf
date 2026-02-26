@@ -26,6 +26,9 @@ This project uses [`next/font`](https://nextjs.org/docs/app/building-your-applic
 2. Seed the database: `npx convex run recommendations:seed`
 3. For Clerk auth in Convex (to show "Added by" for signed-in users):
    - In Clerk Dashboard → JWT Templates → create **Convex** template
+   - Include role claims used by RBAC checks:
+     - `"metadata": { "role": "{{user.public_metadata.role}}" }`
+     - Optional temporary fallback during migration: `"role": "{{user.public_metadata.role}}"`
    - Add `CLERK_JWT_ISSUER_DOMAIN` in Convex Dashboard (Settings → Environment Variables) with the Issuer URL from the template
 
 ### Clerk Authentication

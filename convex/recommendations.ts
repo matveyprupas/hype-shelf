@@ -5,19 +5,14 @@ import {
 } from "@/lib/recommendation-validation";
 import { Genre } from "@/lib/genres";
 import type { Id } from "./_generated/dataModel";
-import { type ClerkIdentity, getAuthenticatedIdentity } from "./lib/auth";
+import {
+  requireAdmin,
+  requireOwnerOrAdmin,
+  requireSignedIn,
+} from "./lib/auth";
 import { genreValidator } from "./lib/genres";
 import { mutation, query } from "./_generated/server";
 import { v } from "convex/values";
-
-/**
- * Admin check – requires Clerk JWT to include role claim.
- * In Clerk Dashboard → JWT Templates → Convex: add claim "role": "{{user.public_metadata.role}}"
- * Then set user's public_metadata.role = "admin" for admin users.
- */
-function isAdmin(identity: ClerkIdentity): boolean {
-  return identity.metadata?.role === "admin";
-}
 
 /** Create a recommendation – auth required, validated inputs */
 export const create = mutation({
@@ -29,7 +24,7 @@ export const create = mutation({
   },
 
   handler: async (ctx, args) => {
-    const identity = getAuthenticatedIdentity(
+    const identity = requireSignedIn(
       await ctx.auth.getUserIdentity(),
       "You must be signed in to add a recommendation."
     );
@@ -75,7 +70,7 @@ export const create = mutation({
 export const remove = mutation({
   args: { id: v.id("recommendations") },
   handler: async (ctx, args) => {
-    const identity = getAuthenticatedIdentity(
+    const identity = requireSignedIn(
       await ctx.auth.getUserIdentity(),
       "You must be signed in to delete a recommendation."
     );
@@ -85,12 +80,11 @@ export const remove = mutation({
       throw new Error("Recommendation not found.");
     }
 
-    const admin = isAdmin(identity);
-    const isOwner = rec.userId === identity.subject;
-
-    if (!admin && !isOwner) {
-      throw new Error("You can only delete your own recommendations.");
-    }
+    requireOwnerOrAdmin({
+      identity,
+      ownerId: rec.userId,
+      errorMessage: "You can only delete your own recommendations.",
+    });
 
     await ctx.db.delete(args.id);
   },
@@ -100,13 +94,8 @@ export const remove = mutation({
 export const toggleStaffPick = mutation({
   args: { id: v.id("recommendations") },
   handler: async (ctx, args) => {
-    const identity = getAuthenticatedIdentity(
-      await ctx.auth.getUserIdentity(),
-      "You must be signed in."
-    );
-    if (!isAdmin(identity)) {
-      throw new Error("Only admins can mark Staff Picks.");
-    }
+    const identity = requireSignedIn(await ctx.auth.getUserIdentity());
+    requireAdmin(identity, "Only admins can mark Staff Picks.");
 
     const rec = await ctx.db.get(args.id);
     if (!rec) {
@@ -215,6 +204,9 @@ const seedData = [
 export const seed = mutation({
   args: {},
   handler: async (ctx) => {
+    const identity = requireSignedIn(await ctx.auth.getUserIdentity());
+    requireAdmin(identity, "Only admins can seed recommendations.");
+
     const existing = await ctx.db.query("recommendations").first();
     if (existing) {
       return { seeded: 0, message: "Data already exists, skipping seed" };

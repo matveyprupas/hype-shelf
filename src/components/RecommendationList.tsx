@@ -6,6 +6,7 @@ import { useQuery } from "convex/react";
 import { api } from "../../convex/_generated/api";
 import { getPublicMetadataRole } from "@/lib/clerk-utils";
 import { GENRE_VALUES, genreLabels, type Genre } from "@/lib/genres";
+import { Role } from "@/lib/roles";
 import { RecommendationCard } from "./RecommendationCard";
 
 export function RecommendationList() {
@@ -16,7 +17,7 @@ export function RecommendationList() {
   });
 
   const currentUserId = user?.id ?? null;
-  const isAdmin = getPublicMetadataRole(user?.publicMetadata) === "admin";
+  const isAdmin = getPublicMetadataRole(user?.publicMetadata) === Role.ADMIN;
 
   const items = useMemo(
     () =>
