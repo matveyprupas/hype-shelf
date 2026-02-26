@@ -28,22 +28,11 @@ export default function Home() {
         </header>
 
         {/* Sign in CTA or user profile */}
-        <div className="mb-10 flex justify-center">
-          <SignedOut>
-            <SignInButton mode="redirect" forceRedirectUrl="/">
-              <button
-                type="button"
-                className="inline-flex items-center gap-2 rounded-full bg-zinc-900 px-6 py-3 text-sm font-medium text-white transition hover:bg-zinc-800 focus:outline-none focus:ring-2 focus:ring-zinc-500 focus:ring-offset-2 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-zinc-200 dark:focus:ring-offset-zinc-950"
-                aria-label="Sign in to add your recommendation"
-              >
-                Sign in to add yours
-              </button>
-            </SignInButton>
-          </SignedOut>
-          <SignedIn>
+        <SignedIn>
+          <div className="mb-10 flex justify-center">
             <AddRecommendationButton />
-          </SignedIn>
-        </div>
+          </div>
+        </SignedIn>
 
         {/* Latest recommendations – Convex real-time list */}
         <section>
@@ -51,6 +40,23 @@ export default function Home() {
             Latest recommendations
           </h2>
           <RecommendationList />
+
+          <div className="mt-10 flex justify-center flex-col items-center gap-2">
+            <SignedOut>
+              <p className="mb-2 text-lg text-zinc-600 dark:text-zinc-400">
+                Sign in to add your recommendation or view all recommendations.
+              </p>
+              <SignInButton mode="redirect" forceRedirectUrl="/">
+                <button
+                  type="button"
+                  className="inline-flex items-center gap-2 rounded-full bg-zinc-900 px-6 py-3 text-sm font-medium text-white transition hover:bg-zinc-800 focus:outline-none focus:ring-2 focus:ring-zinc-500 focus:ring-offset-2 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-zinc-200 dark:focus:ring-offset-zinc-950"
+                  aria-label="Sign in to add your recommendation"
+                >
+                  Sign in
+                </button>
+              </SignInButton>
+            </SignedOut>
+          </div>
         </section>
       </div>
     </div>
