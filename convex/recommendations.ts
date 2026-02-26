@@ -5,13 +5,9 @@ import {
 } from "@/lib/recommendation-validation";
 import { Genre } from "@/lib/genres";
 import type { Id } from "./_generated/dataModel";
-import {
-  requireAdmin,
-  requireOwnerOrAdmin,
-  requireSignedIn,
-} from "./lib/auth";
+import { requireAdmin, requireOwnerOrAdmin, requireSignedIn } from "./lib/auth";
 import { genreValidator } from "./lib/genres";
-import { mutation, query } from "./_generated/server";
+import { internalMutation, mutation, query } from "./_generated/server";
 import { v } from "convex/values";
 
 /** Create a recommendation – auth required, validated inputs */
@@ -155,66 +151,181 @@ export const list = query({
   },
 });
 
-const seedData = [
-  {
-    title: "Everything Everywhere All at Once",
-    genre: Genre.SCI_FI,
-    link: "https://www.imdb.com/title/tt6710474/",
-    blurb:
-      "Mind-bending multiverse action with heart. Michelle Yeoh absolutely owns it.",
-    userId: "seed_alex",
-    addedBy: "Alex",
-    isStaffPick: true,
-  },
-  {
-    title: "The Bear",
-    genre: Genre.DRAMA,
-    link: "https://www.imdb.com/title/tt14452776/",
-    blurb: "Intense kitchen drama. Best show about cooking and chaos.",
-    userId: "seed_jordan",
-    addedBy: "Jordan",
-  },
-  {
-    title: "Talk to Me",
-    genre: Genre.HORROR,
-    link: "https://www.imdb.com/title/tt10638522/",
-    blurb: "Fresh take on possession horror. Genuinely unsettling.",
-    userId: "seed_sam",
-    addedBy: "Sam",
-  },
-  {
-    title: "Poor Things",
-    genre: Genre.COMEDY,
-    link: "https://www.imdb.com/title/tt14230458/",
-    blurb: "Wild, weird, and wonderful. Emma Stone at her finest.",
-    userId: "seed_taylor",
-    addedBy: "Taylor",
-    isStaffPick: true,
-  },
-  {
-    title: "Dune: Part Two",
-    genre: Genre.ACTION,
-    link: "https://www.imdb.com/title/tt15239678/",
-    blurb: "Epic scale, stunning visuals. Must see on the biggest screen.",
-    userId: "seed_casey",
-    addedBy: "Casey",
-  },
+type SeedRecommendation = {
+  title: string;
+  genre: Genre;
+  link: string;
+  blurb: string;
+  userId: string;
+  addedBy: string;
+  isStaffPick?: boolean;
+};
+
+const seedTitleAdjectives = [
+  "Midnight",
+  "Electric",
+  "Crimson",
+  "Hidden",
+  "Silent",
+  "Neon",
+  "Golden",
+  "Frozen",
+  "Shadow",
+  "Broken",
 ];
+
+const seedTitleNouns = [
+  "Archive",
+  "Signal",
+  "Voyage",
+  "Protocol",
+  "Legacy",
+  "Labyrinth",
+  "Frontier",
+  "Paradox",
+  "Echo",
+  "Odyssey",
+];
+
+const seedFormats = [
+  "Movie",
+  "Series",
+  "Documentary",
+  "Special",
+  "Mini-Series",
+];
+
+const seedBlurbs = [
+  "Unexpectedly emotional and easy to binge.",
+  "Sharp writing, great pacing, and memorable characters.",
+  "A stylish pick with a surprisingly thoughtful finale.",
+  "Delivers exactly what the premise promises.",
+  "Perfect for a weekend watch with friends.",
+  "Balances spectacle and story better than expected.",
+];
+
+const seedContributors = [
+  "Alex",
+  "Jordan",
+  "Taylor",
+  "Casey",
+  "Riley",
+  "Sam",
+  "Morgan",
+  "Avery",
+];
+
+function generateSeedRecommendations(
+  count: number,
+  startAt = 0
+): SeedRecommendation[] {
+  return Array.from({ length: count }, (_, index) => {
+    const itemNumber = startAt + index + 1;
+    const adjective = seedTitleAdjectives[index % seedTitleAdjectives.length];
+    const noun = seedTitleNouns[(index * 3) % seedTitleNouns.length];
+    const format = seedFormats[(index * 5) % seedFormats.length];
+    const genre = Object.values(Genre)[index % Object.values(Genre).length];
+    const addedBy = seedContributors[index % seedContributors.length];
+    const title = `${adjective} ${noun} ${format} ${itemNumber}`;
+    const blurb = `${seedBlurbs[index % seedBlurbs.length]} Seeded mock recommendation #${itemNumber}.`;
+
+    return {
+      title,
+      genre,
+      link: `https://example.com/hype-shelf/recommendation/${itemNumber}`,
+      blurb,
+      userId: `seed_user_${(index % seedContributors.length) + 1}`,
+      addedBy,
+      ...(index % 10 === 0 ? { isStaffPick: true } : {}),
+    };
+  });
+}
 
 /** One-time seed – run from Dashboard or CLI to populate initial data */
 export const seed = mutation({
-  args: {},
-  handler: async (ctx) => {
+  args: {
+    count: v.optional(v.number()),
+    append: v.optional(v.boolean()),
+  },
+  handler: async (ctx, args) => {
     const identity = requireSignedIn(await ctx.auth.getUserIdentity());
     requireAdmin(identity, "Only admins can seed recommendations.");
 
-    const existing = await ctx.db.query("recommendations").first();
-    if (existing) {
-      return { seeded: 0, message: "Data already exists, skipping seed" };
+    const count = args.count ?? 150;
+    if (!Number.isInteger(count) || count <= 0 || count > 500) {
+      throw new Error("count must be an integer between 1 and 500.");
     }
+
+    const existing = await ctx.db.query("recommendations").collect();
+    const existingCount = existing.length;
+    const shouldAppend = args.append ?? false;
+
+    if (!shouldAppend && existingCount > 0) {
+      return {
+        seeded: 0,
+        existingCount,
+        message:
+          "Data already exists. Re-run with append=true to add more mock records.",
+      };
+    }
+
+    const seedData = generateSeedRecommendations(
+      count,
+      shouldAppend ? existingCount : 0
+    );
+
     for (const rec of seedData) {
       await ctx.db.insert("recommendations", rec);
     }
-    return { seeded: seedData.length };
+
+    return {
+      seeded: seedData.length,
+      existingCount,
+      totalAfter: existingCount + seedData.length,
+      mode: shouldAppend ? "append" : "initial",
+    };
+  },
+});
+
+/** CLI/internal seed – intended for `convex run internal.recommendations:seedInternal` */
+export const seedInternal = internalMutation({
+  args: {
+    count: v.optional(v.number()),
+    append: v.optional(v.boolean()),
+  },
+  handler: async (ctx, args) => {
+    const count = args.count ?? 150;
+    if (!Number.isInteger(count) || count <= 0 || count > 500) {
+      throw new Error("count must be an integer between 1 and 500.");
+    }
+
+    const existing = await ctx.db.query("recommendations").collect();
+    const existingCount = existing.length;
+    const shouldAppend = args.append ?? false;
+
+    if (!shouldAppend && existingCount > 0) {
+      return {
+        seeded: 0,
+        existingCount,
+        message:
+          "Data already exists. Re-run with append=true to add more mock records.",
+      };
+    }
+
+    const seedData = generateSeedRecommendations(
+      count,
+      shouldAppend ? existingCount : 0
+    );
+
+    for (const rec of seedData) {
+      await ctx.db.insert("recommendations", rec);
+    }
+
+    return {
+      seeded: seedData.length,
+      existingCount,
+      totalAfter: existingCount + seedData.length,
+      mode: shouldAppend ? "append" : "initial",
+    };
   },
 });

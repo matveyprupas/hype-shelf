@@ -52,7 +52,7 @@ export default function Home() {
                   className="inline-flex items-center gap-2 rounded-full bg-zinc-900 px-6 py-3 text-sm font-medium text-white transition hover:bg-zinc-800 focus:outline-none focus:ring-2 focus:ring-zinc-500 focus:ring-offset-2 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-zinc-200 dark:focus:ring-offset-zinc-950"
                   aria-label="Sign in to add yours"
                 >
-                  Sign in
+                  Sign in to add yours
                 </button>
               </SignInButton>
             </SignedOut>

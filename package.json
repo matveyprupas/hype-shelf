@@ -10,7 +10,7 @@
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "convex:dev": "convex dev",
-    "convex:seed": "convex run recommendations:seed"
+    "convex:seed": "convex run recommendations:seedInternal"
   },
   "dependencies": {
     "@clerk/nextjs": "^6.38.1",
