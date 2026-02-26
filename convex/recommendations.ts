@@ -121,14 +121,20 @@ export const toggleStaffPick = mutation({
 
 /** Public list – returns addedBy and userId only for authenticated users (hides from unauth) */
 export const list = query({
-  args: {},
-  handler: async (ctx) => {
+  args: {
+    genre: v.optional(genreValidator),
+  },
+  handler: async (ctx, args) => {
     const identity = await ctx.auth.getUserIdentity();
     const limit = identity ? 50 : 3;
-    const recs = await ctx.db
-      .query("recommendations")
-      .order("desc")
-      .take(limit);
+
+    const recs = args.genre
+      ? await ctx.db
+          .query("recommendations")
+          .withIndex("by_genre", (q) => q.eq("genre", args.genre!))
+          .order("desc")
+          .take(limit)
+      : await ctx.db.query("recommendations").order("desc").take(limit);
 
     return recs.map((rec) => {
       const item: {
